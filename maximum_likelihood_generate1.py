@@ -10,18 +10,18 @@ rng_seed = 1
 np.random.seed(rng_seed)
 
 #---------- SIMULATION PARAMETERS -----------
-f0 = 300e9                   # carrier frequency
+f0 = 25e9                   # carrier frequency
 k = 2*np.pi / (3e8 / f0)    # wave number
 c = 3e8                     # speed of light
 wavelength = c / f0         # Wavelength
 d = wavelength / 2          # Antenna spacing
 # N = int(input('Number of antennas: '))                     # Number of antennas
 N = 256
-range_limits = [.1,2]       # range limits
-angle_limits_deg = [-90,90]
+range_limits = [.1,10]       # range limits
+angle_limits_deg = [-80,80]
 # N_ang, N_r = int(input('Grid size (angle): ')), int(input('Grid size (range): '))        # ML grid
-N_ang, N_r = 128, 10
-ch_realizations = 1000       # channel realizations (for CRLB and ML)
+N_ang, N_r = 128, 20
+# ch_realizations = 1000       # channel realizations (for CRLB and ML)
 ch_realizations = 30       # channel realizations (for CRLB and ML)
 SNR_dB = list(range(0, 25, 5)) # SNR_dB
 SNR = [10 ** (SNR / 10) for SNR in SNR_dB]
@@ -31,11 +31,9 @@ array_length = d*(N-1)
 near_field_boundary = 2*array_length**2/wavelength
 print(f'\nNear-field up to {near_field_boundary:.1f} m (strong near-field region: {near_field_boundary/10:.1f} m)')
 
-# Steering vector dependent only on the angle
+# Near-field Steering vector
 delta = lambda n: (2 * n - N + 1) / 2
 a = lambda theta, r: np.array(np.exp(-1j*k*(np.sqrt(r**2 + delta(np.arange(N))**2*d**2 - 2*r*theta*delta(np.arange(N))*d) - r))).T
-# b = lambda theta, r: np.array([np.exp(-1j*k*(np.sqrt(r**2 + delta(n)**2*d**2 - 2*r*theta*delta(n)*d) - r)) for n in range(N)]).T
-# a = lambda theta, r: np.array([np.exp(-1j*k*(np.sqrt(r**2 + delta(n)**2*d**2 - 2*r*theta*delta(n)*d) - r)) for n in range(N)]).T
 
 ## maximum likelihood init
 ang_grid = np.linspace(-np.pi/2, np.pi/2, N_ang)  # Angle grid in radians
@@ -54,7 +52,6 @@ rmse_pos = []
 
 kk = 0
 for idx_snr, snr in enumerate(SNR):
-    # snr = 100
     sigma_n = 1 / np.sqrt(snr)
     print(f'{idx_snr+1}/{len(SNR)}, SNR = {SNR_dB[idx_snr]} dB')
 
@@ -67,7 +64,6 @@ for idx_snr, snr in enumerate(SNR):
     true_angles, pred_angles = [], []
 
     for i in tqdm(range(ch_realizations)):
-        # s = CN_realization(mean=0, std_dev=1)
         s = 1
         n = CN_realization(mean=0, std_dev=sigma_n, size=N)
         
@@ -119,16 +115,13 @@ for idx_snr, snr in enumerate(SNR):
             if kk == 4:
                 exit()
 
-        # if 
         cur_rmse_angle_deg.append((estimated_angle_near - theta_deg)**2)
         cur_rmse_r.append((estimated_range_near - r)**2)
 
         # calculate euclidean distance from polar coordinates
         theta_pred = np.sin(estimated_angle_near/180*np.pi)
         r_pred = estimated_range_near
-        # rmse_pos[idx_snr,i] = pol2dist(r,theta,r_pred,theta_pred)
         cur_rmse_pos.append(pol2dist(r,theta,r_pred,theta_pred)**2)
-        # p_pred[kk,:], p_true[kk,:] = pol2cart(np.reshape(r_pred,(1,)),np.reshape(theta_pred,(1,))), pol2cart(np.reshape(r,(1,)),np.reshape(theta,(1,)))
         kk = kk + 1
 
         
@@ -137,10 +130,10 @@ for idx_snr, snr in enumerate(SNR):
         pred_ranges.append(estimated_range_near)
         true_angles.append(theta_deg)
         pred_angles.append(estimated_angle_near)
+
     if True:
         # Plot true vs predicted range and angle in real-time
         plt.figure(figsize=(10, 5))
-
         # Subplot 1: True vs Predicted Range
         plt.subplot(1, 2, 1)
         plt.scatter(pred_ranges, true_ranges, color='blue', label='Predicted vs True Range')
@@ -163,8 +156,8 @@ for idx_snr, snr in enumerate(SNR):
 
         plt.suptitle(f'SNR = {10*np.log10(snr):.1f} dB')
         plt.tight_layout()
-        # plt.pause(0.1)  # Display the plot for a brief moment
-        # plt.close()  # Close the plot after the pause
+        # plt.pause(0.1)
+        # plt.close()
         plt.show()
 
     
@@ -173,40 +166,6 @@ for idx_snr, snr in enumerate(SNR):
     rmse_pos.append(np.sqrt(np.mean(cur_rmse_pos)))
     print(f'theta: {rmse_angle_deg}\nr: {rmse_r}\npos: {rmse_pos}')
 
-# import matplotlib.pyplot as plt
-# plt.scatter(p_pred[:, 0], p_pred[:, 1], c='k', label='Predicted')  # p_pred scatter (black points)
-# plt.scatter(p_true[:, 0], p_true[:, 1], c='r', label='True')  # p_true scatter (red points)
-# for i in range(len(p_pred)):
-#     plt.text(p_pred[i, 0], p_pred[i, 1], str(i+1), fontsize=9, color='k') # add number for each point
-#     plt.text(p_true[i, 0], p_true[i, 1], str(i+1), fontsize=9, color='r')
-#     plt.plot([p_pred[i, 0], p_true[i, 0]], [p_pred[i, 1], p_true[i, 1]], 'k--',linewidth=.5) # connect p_pred and p_true with a dashed line
-# plt.xlim([-10,10])
-# plt.ylim([-10,10])
-# plt.grid()
-# plt.axis('equal')
-# plt.legend()
-# plt.show()
-
-# print('rmse r',rmse_r)
-# print('rmse theta', rmse_angle_deg)
-# print('rmse pos', rmse_pos)
-# plt.figure()
-# plt.plot(rmse_r)
-# plt.figure()
-# plt.plot(rmse_angle_deg)
-# plt.figure()
-# plt.plot(rmse_pos)
-# plt.show()
-# exit()
-
-# rmse_angle_deg_mean = np.mean(rmse_angle_deg,axis=1)
-# rmse_angle_rad_mean = np.mean(rmse_angle_sin,axis=1)
-# rmse_r_mean = np.mean(rmse_r,axis=1)
-# rmse_pos_mean = np.mean(rmse_pos,axis=1)
-
-# print(f'rmse_angle: {rmse_angle_deg_mean}')
-# print(f'rmse_r: {rmse_r_mean}')
-# print(f'rmse_pos: {rmse_pos_mean}')
 exit()
 
 # save results

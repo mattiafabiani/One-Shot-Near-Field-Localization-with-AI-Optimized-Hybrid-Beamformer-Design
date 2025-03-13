@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 def pol2dist(r1, theta1, r2, theta2):
     '''

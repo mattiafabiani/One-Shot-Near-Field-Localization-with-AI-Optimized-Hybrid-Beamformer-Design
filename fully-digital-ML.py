@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import pickle
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
 # fix the seed for reproducibility
 rng_seed = 42
@@ -14,9 +15,9 @@ c = 3e8                     # speed of light
 wavelength = c / f0         # Wavelength
 d = wavelength / 2          # Antenna spacing
 N = 128                     # Number of antennas
-range_limits = [1,20]       # range limits
-N_ang, N_r = 128, 10        # ML grid
-ch_realizations = 100       # channel realizations (for CRLB and ML)
+range_limits = [1,10]       # range limits
+N_ang, N_r = 180, 10        # ML grid
+ch_realizations = 2000       # channel realizations (for CRLB and ML)
 SNR_dB = list(range(0, 25, 5)) # SNR_dB
 SNR = [10 ** (SNR / 10) for SNR in SNR_dB]
 
@@ -54,11 +55,11 @@ pts = np.zeros((len(SNR),ch_realizations,2),dtype=float)
     
 dataset_crlb = dict()
 ii = 0
+print(f'total iterations: {len(SNR)*ch_realizations}')
 for idx_snr, snr in enumerate(SNR):
     sigma_n = 1 / np.sqrt(snr)
-    print('\n')
-    print(snr)
-    for i in range(ch_realizations):
+    print(f'{idx_snr+1}/{len(SNR)}, SNR = {SNR_dB[idx_snr]} dB')
+    for i in tqdm(range(ch_realizations)):
         s = CN_realization(mean=0, std_dev=1)
         n = CN_realization(mean=0, std_dev=sigma_n, size=N)
         
@@ -86,25 +87,24 @@ for idx_snr, snr in enumerate(SNR):
 
 
 
-        # Maximum Likelihood Estimation over angle and range for near-field
-        ML_bins_near = np.zeros((len(ang_grid), len(range_grid)), dtype=float)
-        for k, ang in enumerate(ang_grid):
+        # Maximum Likelihood Estimation - near-field
+        ML_bins_near = np.zeros((N_ang,N_r), dtype=float)
+        for ii, angg in enumerate(ang_grid):
             for j, rr in enumerate(range_grid):
-                y1_test = a(np.sin(ang), rr) * s
-                ML_bins_near[k, j] = np.abs(np.dot(y_, y1_test.conj().T))**2
-
+                y1_test = a(np.sin(angg), rr) * s
+                ML_bins_near[ii, j] = np.abs(np.dot(y_, y1_test.conj().T))**2
 
         # Find the indices of the maximum likelihood estimate for near-field
         idx_ang_near, idx_range_near = np.unravel_index(np.argmax(ML_bins_near), ML_bins_near.shape)
         estimated_angle_near = np.degrees(ang_grid[idx_ang_near])
         estimated_range_near = range_grid[idx_range_near]
-        rmse_angle_deg[idx_snr,i] = np.abs(estimated_angle_near - theta/np.pi*180)
+        rmse_angle_deg[idx_snr,i] = np.abs(estimated_angle_near - np.arcsin(theta)/np.pi*180)
         rmse_angle_sin[idx_snr,i] = np.abs(np.sin(estimated_angle_near/180*np.pi) - theta)
         rmse_r[idx_snr,i] = np.abs(estimated_range_near - r)
 
         ii += 1
-        if np.mod(ii,10) == 0:
-            print(ii)
+        # if np.mod(ii,5) == 0:
+        #     print(ii)
 
 rmse_angle_deg_mean = np.mean(rmse_angle_deg,axis=1)
 rmse_angle_rad_mean = np.mean(rmse_angle_sin,axis=1)
@@ -114,30 +114,10 @@ CRB_avg = np.mean(CRB,axis=1)
 CRB_theta = CRB_avg[:,0,0]
 CRB_r = CRB_avg[:,1,1]
 
-CRB_r_8RF = [8.4, 4.7, 2.5, 1.8, 0.7] # figure 3b
-CRB_theta_8RF = [0.6, .33, .18, .11, .06] # figure 3a
+print(f'RMSE r: {rmse_r_mean}')
+print(f'RMSE angle (deg) {rmse_angle_deg_mean}')
 
-plt.figure(figsize=(10,4))
-plt.subplot(121)
-plt.plot(SNR_dB, rmse_r_mean,'-sk',label=f'fully-digital (ML {N_ang}-{N_r} grid)')
-plt.plot(SNR_dB,CRB_r,'-or',label='CRLB fully-digital')
-plt.plot(SNR_dB,CRB_r_8RF,'-og',label='CRLB (hybrid 8 RF chains)')
-plt.xticks(SNR_dB)
-# plt.ylim([0,12])
-plt.xlabel('SNR (dB)')
-plt.ylabel('RMSE (r)')
-plt.legend()
-plt.grid()
 
-plt.subplot(122)
-plt.plot(SNR_dB, rmse_angle_rad_mean,'-sk',label=f'fully-digital (ML {N_ang}-{N_r} grid)')
-plt.plot(SNR_dB,np.sin(CRB_theta),'-or',label='CRLB fully-digital')
-plt.plot(SNR_dB,CRB_theta_8RF,'-og',label='CRLB (hybrid 8 RF chains)')
-plt.xticks(SNR_dB)
-plt.yscale('log')
-# plt.ylim([0.04,1])
-plt.grid(True,which='both')
-plt.xlabel('SNR (dB)')
-plt.ylabel('RMSE (theta)')
-plt.legend()
-plt.show
+# np.save('saved_models/maximum_likelihood/rmse_r_128_10.npy',rmse_r_mean,allow_pickle=True)
+# np.save('saved_models/maximum_likelihood/rmse_theta_deg_128_10.npy',rmse_angle_deg_mean,allow_pickle=True)
+# np.save('saved_models/maximum_likelihood/rmse_theta_rad_128_10.npy',rmse_angle_rad_mean,allow_pickle=True)

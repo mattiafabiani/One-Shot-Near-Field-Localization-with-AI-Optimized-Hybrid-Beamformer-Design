@@ -9,21 +9,14 @@ Date: 9/04/2024
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-# import torch.nn.init as init
 import numpy as np
 
 class DNN_model(nn.Module):
     def __init__(self, N, N_RF, n_out):
         super(DNN_model, self).__init__()
-        # N_hidden = 128*2
         self.N = N
         self.N_RF = N_RF
         self.fc1 = nn.Linear(self.N*2, self.N_RF*2)
-        # self.fc2 = nn.Linear(self.N_RF*2, 256)
-        # self.fc3 = nn.Linear(256, 256)
-        # self.fc4 = nn.Linear(256, 256)
-        # self.fc5 = nn.Linear(256, 256)
-        # self.fc6 = nn.Linear(256, n_out)
         self.mlp = nn.Sequential(
             nn.Linear(self.N_RF*2,128), nn.ReLU(),
             nn.Linear(128,128), nn.ReLU(),
@@ -68,72 +61,6 @@ class CNN_model(nn.Module):
         x = self.mlp(x)
         return x
     
-# class CNN_model(nn.Module):
-#     def __init__(self, N, N_RF, n_out):
-#         super(CNN_model, self).__init__()
-#         # N_hidden = 128*2
-#         self.N = N
-#         self.N_RF = N_RF
-#         conv1_channels = 32
-#         conv2_channels = 16
-#         self.fc1 = nn.Linear(self.N*2, self.N_RF*2)
-#         self.conv1 = nn.Sequential(nn.Conv2d(1,conv1_channels,1,1), nn.BatchNorm2d(conv1_channels), nn.ReLU())
-#         self.conv2 = nn.Sequential(nn.Conv2d(conv1_channels,conv2_channels,1,1), nn.BatchNorm2d(conv2_channels), nn.ReLU())
-#         self.mlp = nn.Sequential(
-#             # nn.Linear(self.N_RF*conv2_channels,512), nn.BatchNorm1d(512), nn.ReLU(),
-#             nn.Linear(416,512), nn.BatchNorm1d(512), nn.ReLU(),
-#             nn.Linear(512,256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(.1),
-#             nn.Linear(256,128), nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(.1),
-#             nn.Linear(128,n_out), nn.Tanh()
-#         )
-
-#     def forward(self, x):
-#         batch_size = x.size(0)
-
-#         # Forward pass through the first layer
-#         x = self.fc1(x)  # Output shape: [batch_size, N_RF * 2]
-#         x = x.view(batch_size, self.N_RF, 2)  # Output shape: [batch_size, N_RF, 2]
-#         # x = x.permute(0, 2, 1).unsqueeze(3)  # Output shape: [batch_size, 2, N_RF, 1]
-#         x = x.unsqueeze(1)  # Output shape: [batch_size, 2, N_RF, 1]
-#         x = self.conv1(x)  # Output shape: [batch_size, n_channels1, N_RF, 1]
-#         x = self.conv2(x)  # Output shape: [batch_size, n_channels2, N_RF, 1]
-#         x = x.view(batch_size, -1)  # Output shape: [batch_size, n_channels * N_RF]
-#         x = self.mlp(x)
-#         return x
-
-# class CNN_model(nn.Module):
-#     def __init__(self, N, N_RF, n_out):
-#         super(CNN_model, self).__init__()
-#         # N_hidden = 128*2
-#         self.N = N
-#         self.N_RF = N_RF
-#         conv1_channels = 32
-#         conv2_channels = 16
-#         self.fc1 = nn.Linear(self.N*2, self.N_RF*2)
-#         self.conv1 = nn.Sequential(nn.Conv2d(1,conv1_channels,1,1), nn.BatchNorm2d(conv1_channels), nn.ReLU())
-#         self.conv2 = nn.Sequential(nn.Conv2d(conv1_channels,conv2_channels,1,1), nn.BatchNorm2d(conv2_channels), nn.ReLU())
-#         self.mlp = nn.Sequential(
-#             nn.Linear(self.N_RF*conv2_channels*2,128), nn.ReLU(),
-#             # nn.Linear(416,512), nn.BatchNorm1d(512), nn.ReLU(),
-#             # nn.Linear(128,128), nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(.1),
-#             nn.Linear(128,128), nn.ReLU(),
-#             nn.Linear(128,n_out), nn.Tanh()
-#         )
-
-#     def forward(self, x):
-#         batch_size = x.size(0)
-
-#         # Forward pass through the first layer
-#         x = self.fc1(x)  # Output shape: [batch_size, N_RF * 2]
-#         x = x.view(batch_size, self.N_RF, 2)  # Output shape: [batch_size, N_RF, 2]
-#         # x = x.permute(0, 2, 1).unsqueeze(3)  # Output shape: [batch_size, 2, N_RF, 1]
-#         x = x.unsqueeze(1)  # Output shape: [batch_size, 1, N_RF, 2]
-#         x = self.conv1(x)  # Output shape: [batch_size, n_channels1, N_RF, 2]
-#         x = self.conv2(x)  # Output shape: [batch_size, n_channels2, N_RF, 2]
-#         x = x.view(batch_size, -1)  # Output shape: [batch_size, n_channels * N_RF]
-#         x = self.mlp(x)
-#         return x
-    
 class CNN_snapshots(nn.Module):
     def __init__(self, N, N_RF, n_out, n_snap=10):
         super(CNN_snapshots, self).__init__()
@@ -155,12 +82,8 @@ class CNN_snapshots(nn.Module):
     def forward(self, x):
         # Forward pass through the first layer
         x = self.fc1(x)  # Output shape: [batch_size, n_snapshots, N_RF * 2]
-        # print(f'out fc1: {x.shape}')
         x = x.view(x.size(0), self.n_snap, self.N_RF, 2)  # Output shape: [batch_size, n_snapshots, N_RF, 2]
-        # print(f'x.view() : {x.shape}')
-        # x = x.permute(0, 2, 1).unsqueeze(3)  # Output shape: [batch_size, 2, N_RF, 1]
         x = self.conv1(x)  # Output shape: [batch_size, n_channels, N_RF, 1]
-        # print(f'out conv 1 : {x.shape}')
         x = self.conv2(x)
         x = x.view(x.size(0), -1)  # Output shape: [batch_size, n_channels * N_RF]
         

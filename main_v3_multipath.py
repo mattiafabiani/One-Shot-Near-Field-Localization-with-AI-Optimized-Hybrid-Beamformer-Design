@@ -1,6 +1,5 @@
 '''
 Author: Mattia Fabiani
-Update: This version of the main includes the multipath.
 
 To generate the dataset run this in the command line: python main_v3_multipath.py --generate_dataset 1 --dataset_name dataset_scat
 To train the model type this:                         python main_v3_multipath.py --train 1 --dataset_name dataset_scat --epochs 200 --type sub-connected --id scat --batch_size 250
