@@ -1,10 +1,10 @@
 '''
 Author: Mattia Fabiani
+Update: This version of the main allows the grouping of the results by SNR values.
 
-To generate the dataset run this in the command line: python main_v3_multipath.py --generate_dataset 1 --dataset_name dataset_scat
-To train the model type this:                         python main_v3_multipath.py --train 1 --dataset_name dataset_scat --epochs 200 --type sub-connected --id scat --batch_size 250
-                                                      python main_v3_multipath.py --logdir saved_models/multipath/CNN --epochs 100 --N_RF 16 --id localized_scatterers --train 1 --dataset_name dataset_scat --type sub-connected --model 1
-'''
+To generate the dataset run this in the command line: python main.py --generate_dataset 1 --dataset_size 20000 --dataset_name my_dataset
+To train the model type these:                        python main.py --train 1 --dataset_name TIMES --dataset_size 20000 --epochs 50 --type sub-connected --logdir saved_models/single_user_TIMES/N_RF  --batch_size 250 --lr 0.003 --N 128 --N_RF 64 --model 1
+                                                      '''
 
 import matplotlib.pyplot as plt
 import pickle
@@ -14,23 +14,21 @@ import numpy as np
 import torch
 import argparse
 import torch.optim as optim
-from utils import CN_realization, path_loss_model, pol2dist
 import os
-# from torch.utils.data import DataLoader
-from dnn_model import DNN_model, CNN_model, CNN_snapshots
+from dnn_model import CNN_model, DNN_model
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from network_functions_multipath import train_loop, eval_loop, test_loop
+from network_functions import train_loop, eval_loop, test_loop
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--id', type=str,                   default='', help='Unique experiment identifier')
 parser.add_argument('--epochs', type=int,               default=50, help='Number of train epochs.')
-parser.add_argument('--model', type=int,                default=1, help='Specify model') # 0: DNN, 1: CNN
 parser.add_argument('--N', type=int,                    default=128, help='Number of antennas.')
 parser.add_argument('--N_RF', type=int,                 default=16, help='Number of RF chains.')
-parser.add_argument('--type', type=str,                 default='fully-connected', help='RF chains to antenna connection')
+parser.add_argument('--type', type=str,                 default='sub-connected', help='RF chains to antenna connection')
+parser.add_argument('--model', type=int,                default=1, help='Specify model') # 0: DNN, 1: CNN
 parser.add_argument('--generate_dataset', type=int,     default=0, help='Generate Dataset.')
-parser.add_argument('--dataset_name', type=str,         default='dataset', help='Default dataset name')
 parser.add_argument('--dataset_size', type=int,         default=20000, help='# of samples for each SNR value.')
+parser.add_argument('--dataset_name', type=str,         default='polar_uniform', help='Default dataset name')
 parser.add_argument('--train', type=int,                default=1, help='Train the DNN model.')
 parser.add_argument('--lr', type=float,                 default=0.001, help='Learning rate.')
 parser.add_argument('--batch_size', type=int,           default=256, help='Batch size')
@@ -42,17 +40,22 @@ foldername = args.type + '_' +'epochs'+str(args.epochs)+'_batch'+str(args.batch_
 args.logdir = os.path.join(args.logdir, foldername + '_' + args.id)
 
 #---------- SIMULATION PARAMETERS -----------
-f0 = 300e9                   # carrier frequency
+f0 = 25e9                   # carrier frequency
 k = 2*np.pi / (3e8 / f0)    # wave number
-d = 3e8/f0 / 2              # antenna spacing
+wavelength = 3e8/f0
+d = wavelength / 2              # antenna spacing
 N = args.N                     # antennas
 N_RF = args.N_RF                   # RF chains
 SNR_dB = list(range(0,25,5))
 SNR = [10 ** (SNR / 10) for SNR in SNR_dB]
 
-range_limits = [.1, 3]      # near-field range limits [m]
-use_snapshots = 0
-n_snapshots = 10
+range_limits = [1, 10]      # near-field range limits [m]
+
+
+array_length = d * (N - 1)
+near_field_boundary = 2 * array_length ** 2 / wavelength
+print(f'Near-field up to {near_field_boundary:.1f} m'
+      f'\nArray length: {array_length*100} cm,\nwavelength = {wavelength*1000} mm')
 
 dataset_size = args.dataset_size        # number of signals per SNR (10k * 5 = 50k samples in ottal)
 epochs = args.epochs
@@ -64,13 +67,16 @@ test_split = 0.1
 dataset_root = 'dataset/'
 dataset_name = args.dataset_name+'_'+str(int(dataset_size*len(SNR)/1e3)) + 'k.npy'
 dataset_path = os.path.join(dataset_root,dataset_name)
-models = [DNN_model,CNN_model,CNN_snapshots]        # create a list of models if more than one are developed
+models = [DNN_model, CNN_model]
 rng_seed = 42
 #------------------------------------------
 
 #%% Data Prep
 
 if args.generate_dataset:
+    def CN_realization(mean, std_dev, size=1):
+        return np.random.normal(mean, std_dev, size) + 1j * np.random.normal(mean, std_dev, size)
+
     delta = lambda n: (2*n - N + 1)/2
 
     # near-field array response vector (parabolic wavefront approximation)
@@ -81,75 +87,28 @@ if args.generate_dataset:
 
     np.random.seed(rng_seed)
     ii = 0
-    # s = np.random.choice([-1, 1], size=n_snapshots) # known TX sequence by the near-field user
-    # s = [-1, 1, 1, -1, 1, -1, -1, 1, 1, -1] if use_snapshots else 1
     s = 1
-
     for i in tqdm(range(dataset_size)):
         for snr in SNR:
             sigma_n = 1 / np.sqrt(snr)
-            '''generate uniform positions for user and scatterer'''
+
             p = np.random.uniform(low=0,high=2*range_limits[1],size=(2,)) - [range_limits[1],0]
             r =  np.linalg.norm(p)
             while r < range_limits[0] or r > range_limits[1]:
                 p = np.random.uniform(low=0,high=2*range_limits[1],size=(2,)) - [range_limits[1],0]
                 r =  np.linalg.norm(p)
-            '''scatterer generated up to 1.5 m from the user location'''
-            # r_scat = np.random.uniform(0,1.5) # scatterer placed at max distance of 1.5 m from the user
-            # theta_scat = np.random.uniform(0,2*np.pi)
-            # x1 = p[0] + r_scat * np.cos(theta_scat)
-            # y1 = p[1] + r_scat * np.sin(theta_scat)
-            # r_scat = np.linalg.norm([x1,y1])
-            # # if scatterer placed outside the region, generate new
-            # while r_scat < range_limits[0] or r_scat > range_limits[1]:
-            #     r_scat = np.random.uniform(0,1.5)
-            #     theta_scat = np.random.uniform(0,2*np.pi)
-            #     x1 = p[0] + r_scat * np.cos(theta_scat)
-            #     y1 = p[1] + r_scat * np.sin(theta_scat)
-            #     r_scat = np.linalg.norm([x1,y1])
-
-            '''scatterer randomly generated like user'''
-            p_scat = np.random.uniform(low=0,high=2*range_limits[1],size=(2,)) - [range_limits[1],0]
-            r_scat =  np.linalg.norm(p_scat)
-            while r_scat < range_limits[0] or r_scat > range_limits[1]:
-                p_scat = np.random.uniform(low=0,high=2*range_limits[1],size=(2,)) - [range_limits[1],0]
-                r_scat =  np.linalg.norm(p_scat)
-
             theta = np.sin(np.pi/2 - np.arctan2(p[1],p[0]))
-            theta_scat = np.sin(np.pi/2 - np.arctan2(p_scat[1],p_scat[0]))
             r_norm = 2 * (r - range_limits[0]) / (range_limits[1] - range_limits[0]) - 1
-            r_scat_norm = 2 * (r_scat - range_limits[0]) / (range_limits[1] - range_limits[0]) - 1
-            
+
+            n = CN_realization(mean=0, std_dev=sigma_n, size=N)
             # uplink received signal
-            '''
-             y: is the received signal in the presence of a single scatterer (random location)
-            '''
-            # dist_LoS_path = r
-            # dist_NLoS_path = r_scat + pol2dist(r,theta,r_scat,theta_scat)
-            # L = path_loss_model(dist_LoS_path)
-            # beta_LoS = 10**(-L/10)
-            # L = path_loss_model(dist_NLoS_path)
-            # beta_NLoS = 10**(-L/10)
-            # scaling_factor = beta_NLoS / beta_LoS
-
-            if not use_snapshots:
-                n = CN_realization(mean=0, std_dev=sigma_n, size=N)
-                # y_ = a(theta,r)*s + scaling_factor*np.exp(1j*np.random.uniform(-np.pi,np.pi))*a(theta_scat,r_scat)*s + n
-                y_ = a(theta,r)*s + a(theta_scat,r_scat)*s*CN_realization(0,1,1) + n
-                y = np.concatenate((y_.real, y_.imag))
-            else:
-                y_snap = []
-                # for snap in range(n_snapshots):
-                #     n = CN_realization(mean=0, std_dev=sigma_n, size=N)
-                #     y_ = ( a(theta,r) + scaling_factor*np.exp(1j*np.random.uniform(-np.pi,np.pi))*a(theta_scat,r_scat) ) *s[snap]/n_snapshots + n # should I divide by the sequence length? to make sure the snr is as expected
-                #     y = np.concatenate((y_.real, y_.imag))
-                #     y_snap.append(y)
-                # y = np.stack(y_snap)
-
+            y_ = a(theta,r) * s + n
+            y = np.concatenate((y_.real, y_.imag))
+            
             datapoint = {
                 'SNR': snr,
                 'X': y,
-                'y': np.array([theta, theta_scat, r_norm, r_scat_norm])
+                'y': np.array([theta, r_norm])
             }
             
             dataset[ii] = datapoint
@@ -160,7 +119,7 @@ if args.generate_dataset:
 
     np.save(dataset_path,dataset,allow_pickle=True)
     print(f"Dataset saved to {dataset_path}")
-    print(len(dataset))
+    print(f'The dataset contains {len(dataset)} samples')
     exit()
 
 # Load Data
@@ -174,7 +133,7 @@ test_dim = int(test_split*dataset_size*len(SNR))
 X_train, y_train = np.array([dataset[i]['X'] for i in range(train_dim)]), np.array([dataset[i]['y'] for i in range(train_dim)])
 X_val, y_val = np.array([dataset[i]['X'] for i in range(train_dim,train_dim+val_dim)]), np.array([dataset[i]['y'] for i in range(train_dim,train_dim+val_dim)])
 X_test, y_test = np.array([dataset[i]['X'] for i in range(train_dim+val_dim,train_dim+val_dim + test_dim)]), np.array([dataset[i]['y'] for i in range(train_dim+val_dim,train_dim+val_dim + test_dim)])
-# X_test, y_test = np.array([dataset[i] for i in range(train_dim+val_dim,train_dim+val_dim + test_dim)]), np.array([dataset[i]['y'] for i in range(train_dim+val_dim,train_dim+val_dim + test_dim)])
+
 SNR_train = torch.tensor([np.where(dataset[i]['SNR']==np.array(SNR))[0] for i in range(train_dim)]).squeeze()
 SNR_val = torch.tensor([np.where(dataset[i]['SNR']==np.array(SNR))[0] for i in range(val_dim)]).squeeze()
 SNR_test = torch.tensor([np.where(dataset[i]['SNR']==np.array(SNR))[0] for i in range(test_dim)]).squeeze()
@@ -211,11 +170,7 @@ if args.train:
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     # Neural Network
-    model = models[args.model](N,N_RF,n_out=4)
-
-    # Applying the constraints to the first layer only (precoder power constraint)
-    # constraints=weightConstraint(N,N_RF)
-    # model._modules['fc1'].apply(constraints)
+    model = models[args.model](N,N_RF,2)
     trainable_params = list(model.parameters())
     num_trainable_params = sum(p.numel() for p in trainable_params if p.requires_grad)
     print("Number of trainable parameters:", num_trainable_params)
@@ -224,7 +179,6 @@ if args.train:
     model.to(device)
     criterion = torch.nn.MSELoss() # Training Criterion
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4) # Optimizer
-    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
     if args.scheduler:
         scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=50, threshold=0.0001)
 
@@ -236,9 +190,11 @@ if args.train:
     val_rmse_theta = []
     val_rmse_pos = []
     min_val_loss = 100
+    min_pos_error = 100
     train_acc = np.zeros((epochs))
     val_loss = np.zeros((epochs))
     val_acc = np.zeros((epochs))
+    best_epoch = 0
 
     # Epochs
     for epoch in range(epochs):
@@ -251,28 +207,26 @@ if args.train:
             'SNR [dB]': SNR_dB,
             'Train (r)': RMSE_train['r'],
             'Val (r)': RMSE_val['r'],
-            'Train (r_scat)': RMSE_train['r_scat'],
-            'Val (r_scat)': RMSE_val['r_scat'],
             'Train (theta)': RMSE_train['theta'],
             'Val (theta)': RMSE_val['theta'],
-            'Train (theta_scat)': RMSE_train['theta_scat'],
-            'Val (theta_scat)': RMSE_val['theta_scat'],
             'Train (pos)': RMSE_train['pos'],
             'Val (pos)': RMSE_val['pos'],
-            'Train (pos_scat)': RMSE_train['pos_scat'],
-            'Val (pos_scat)': RMSE_val['pos_scat'],
         }
-        
         df = pd.DataFrame(data,index=SNR_dB)
         df.index.name = 'SNR [dB]'
         print(df)
-        print(f'Train loss: {train_loss[epoch]:.4f}, Val loss: {val_loss[epoch]:.4f}')
-        if val_loss[epoch] < min_val_loss:
-            print(f'Val loss improved: {min_val_loss:.3f} -> {val_loss[epoch]:.3f}')
+        avg_pos_error = df['Val (pos)'].mean()
+        print(f'Train loss: {train_loss[epoch]:.5f}, Val loss: {val_loss[epoch]:.5f}, avg position error: {avg_pos_error:.2f} m')
+        if val_loss[epoch] < min_val_loss or df['Val (pos)'].mean() < min_pos_error:
+            best_epoch = epoch
+            min_pos_error = df['Val (pos)'].mean()
+            print(f'Val loss improved: {min_val_loss:.5f} -> {val_loss[epoch]:.5f}')
+            print('Saving results...')
             min_val_loss = val_loss[epoch]
-            print('Saving model..\n')
+            print('Saving model..')
             torch.save(model.state_dict(), os.path.join(model_directory, 'model_best.pth'))
             df.to_csv(os.path.join(args.logdir,'best_rmse_epoch.csv'),index=False)
+        print(f'Best epoch: {best_epoch+1}, best val loss: {min_val_loss:.5f}, best (avg) position error: {min_pos_error:2f}\n')
 
         train_rmse_r.append(RMSE_train['r'])
         train_rmse_theta.append(RMSE_train['theta'])
@@ -280,14 +234,6 @@ if args.train:
         val_rmse_r.append(RMSE_val['r'])
         val_rmse_theta.append(RMSE_val['theta'])
         val_rmse_pos.append(RMSE_val['pos'])
- 
-        # Save the best model
-        # if val_loss[epoch] <= np.min(val_loss[:epoch] if epoch>0 else val_loss[epoch]):
-        #     print('Saving model..')
-        #     torch.save(model.state_dict(), os.path.join(model_directory, 'model_best.pth'))
-        #     # torch.save(model.state_dict(), 'saved_models/type0_batchsize5_rng42_epoch500_v11/model_best.pth')
-        if args.scheduler:
-            scheduler.step(val_loss[epoch])
 
     torch.save(model.state_dict(), os.path.join(model_directory, 'model_final.pth'))
     df.to_csv(os.path.join(args.logdir,'final_rmse_epoch.csv'),index=False)
@@ -300,55 +246,52 @@ if args.train:
     np.save(os.path.join(model_directory, 'val_rmse_theta.npy'),val_rmse_theta)
     np.save(os.path.join(model_directory, 'val_rmse_pos.npy'),val_rmse_pos)
     
-    # plt.figure()
-    # plt.plot(train_loss,'k',label='train loss')
-    # plt.plot(val_loss,'r',label='val loss')
-    # plt.legend()
-    # plt.xlabel('Epoch')
-    # plt.ylabel('Loss')
-    # plt.grid()
+    plt.figure()
+    plt.plot(train_loss,'k',label='train loss')
+    plt.plot(val_loss,'r',label='val loss')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.grid()
     
-    # plt.figure()
-    # plt.plot(train_rmse_r,'k',label='train rmse (r)')
-    # plt.plot(val_rmse_r,'r',label='val rmse (r)')
-    # plt.legend()
-    # plt.xlabel('Epoch')
-    # plt.ylabel('RMSE (m)')
+    plt.figure()
+    plt.plot(train_rmse_r,'k',label='train rmse (r)')
+    plt.plot(val_rmse_r,'r',label='val rmse (r)')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('RMSE (m)')
     
-    # plt.figure()
-    # plt.plot(train_rmse_theta,'k',label='train rmse (theta)')
-    # plt.plot(val_rmse_theta,'r',label='val rmse (theta)')
-    # plt.legend()
-    # plt.xlabel('Epoch')
-    # plt.ylabel('RMSE (deg)')
+    plt.figure()
+    plt.plot(train_rmse_theta,'k',label='train rmse (theta)')
+    plt.plot(val_rmse_theta,'r',label='val rmse (theta)')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('RMSE (deg)')
     
-    # plt.figure()
-    # plt.plot(train_rmse_pos,'k',label='train rmse (pos)')
-    # plt.plot(val_rmse_pos,'r',label='val rmse (pos)')
-    # plt.legend()
-    # plt.xlabel('Epoch')
-    # plt.ylabel('RMSE (m)')
-    # plt.show()
+    plt.figure()
+    plt.plot(train_rmse_pos,'k',label='train rmse (pos)')
+    plt.plot(val_rmse_pos,'r',label='val rmse (pos)')
+    plt.legend()
+    plt.xlabel('Epoch')
+    plt.ylabel('RMSE (m)')
+    plt.show()
 
     print('Finished Training')
 
+    
     print('Testing..')
     model_PATH = args.logdir + '/model_best.pth'
-    model = models[args.model](N,N_RF,4)
+    model = models[args.model](N,N_RF,2)
     model.load_state_dict(torch.load(model_PATH))
     
     criterion = torch.nn.MSELoss() # Training Criterion
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4) # Optimizer
 
-    test_loss, RMSE_test, data_test = test_loop(X_test, y_test, SNR_test, model, criterion, device,N,N_RF,range_limits, batch_size=batch_size,type=args.type)
-    
+    test_loss, RMSE_test, data_test = test_loop(X_test, y_test, SNR_test, model, criterion, device,N,N_RF,range_limits, batch_size=args.batch_size,type=args.type)
     data = {
             'Test (r)': RMSE_test['r'],
             'Test (theta)': RMSE_test['theta'],
-            'Test (pos)': RMSE_test['pos'],
-            'Test (r_scat)': RMSE_test['r_scat'],
-            'Test (theta_scat)': RMSE_test['theta_scat'],
-            'Test (pos_scat)': RMSE_test['pos_scat']
+            'Test (pos)': RMSE_test['pos']
         }
     df = pd.DataFrame(data,index=SNR_dB)
     df.index.name = 'SNR [dB]'
@@ -356,57 +299,27 @@ if args.train:
     df.to_csv(os.path.join(args.logdir,'test_rmse.csv'),index=False)
     df_datapoints = pd.DataFrame(data_test)
     df_datapoints.to_csv(os.path.join(args.logdir,'test_scores.csv'),index=False)
-
+    
 else:
     #%% Test
 
     print('Testing..')
     model_PATH = args.logdir + '/model_best.pth'
-    model = models[args.model](N,N_RF,4)
+    model = models[args.model](N,N_RF,2)
     model.load_state_dict(torch.load(model_PATH))
     
     criterion = torch.nn.MSELoss() # Training Criterion
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4) # Optimizer
 
-    test_loss, RMSE_test, data_test = test_loop(X_test, y_test, SNR_test, model, criterion, device,N,N_RF,range_limits, batch_size=batch_size,type=args.type)
-    
+    test_loss, RMSE_test, data_test = test_loop(X_test, y_test, SNR_test, model, criterion, device,N,N_RF,range_limits, batch_size=args.batch_size,type=args.type)
     data = {
             'Test (r)': RMSE_test['r'],
             'Test (theta)': RMSE_test['theta'],
-            'Test (pos)': RMSE_test['pos'],
-            'Test (r_scat)': RMSE_test['r_scat'],
-            'Test (theta_scat)': RMSE_test['theta_scat'],
-            'Test (pos_scat)': RMSE_test['pos_scat']
+            'Test (pos)': RMSE_test['pos']
         }
     df = pd.DataFrame(data,index=SNR_dB)
     df.index.name = 'SNR [dB]'
     print(df)
-    # df.to_csv(os.path.join(args.logdir,'test_rmse.csv'),index=False)
+    df.to_csv(os.path.join(args.logdir,'test_rmse.csv'),index=False)
     df_datapoints = pd.DataFrame(data_test)
     df_datapoints.to_csv(os.path.join(args.logdir,'test_scores.csv'),index=False)
-
-    for theta_max in [60, 70, 80]:
-        grouped_df_snr = df_datapoints.groupby('SNR')
-        r_list = []
-        theta_list = []
-        pos_list = []
-        r_scat_list = []
-        theta_scat_list = []
-        pos_scat_list = []
-        for snr, group in grouped_df_snr:
-            group = group[np.abs(group['theta_true']) < theta_max]
-            r_list.append(np.sqrt(group['Test (r)'].mean()))
-            theta_list.append(np.sqrt(group['Test (theta)'].mean()))
-            pos_list.append(np.sqrt(group['Test (pos)'].mean()))
-            r_scat_list.append(np.sqrt(group['Test (r_scat)'].mean()))
-            theta_scat_list.append(np.sqrt(group['Test (theta_scat)'].mean()))
-            pos_scat_list.append(np.sqrt(group['Test (pos_scat)'].mean()))
-        data = pd.DataFrame({
-            'Test (r)': r_list,
-            'Test (theta)': theta_list,
-            'Test (pos)': pos_list,
-            'Test (r_scat)': r_scat_list,
-            'Test (theta_scat)': theta_scat_list,
-            'Test (pos_scat)': pos_scat_list,
-        })
-        data.to_csv(os.path.join(args.logdir,f'test_rmse{theta_max}.csv'),index=False)
