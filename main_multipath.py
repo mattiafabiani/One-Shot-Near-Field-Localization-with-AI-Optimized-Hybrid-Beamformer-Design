@@ -2,7 +2,7 @@
 Author: Mattia Fabiani
 
 To generate the dataset run this in the command line: python main_multipath.py --generate_dataset 1 --dataset_name dataset_scat
-To train the model type this:                         python main_multipath.py --logdir saved_models/multipath/CNN --epochs 100 --N_RF 16 --id localized_scatterers --train 1 --dataset_name dataset_scat --type sub-connected --model 1
+To train the model type this:                         python main_multipath.py --logdir saved_models/multipath/CNN --epochs 100 --N_RF 16 --train 1 --dataset_name dataset_scat --type sub-connected --model 1
 '''
 
 import matplotlib.pyplot as plt
@@ -31,7 +31,7 @@ parser.add_argument('--generate_dataset', type=int,     default=0, help='Generat
 parser.add_argument('--dataset_name', type=str,         default='dataset', help='Default dataset name')
 parser.add_argument('--dataset_size', type=int,         default=20000, help='# of samples for each SNR value.')
 parser.add_argument('--train', type=int,                default=1, help='Train the DNN model.')
-parser.add_argument('--lr', type=float,                 default=0.001, help='Learning rate.')
+parser.add_argument('--lr', type=float,                 default=0.003, help='Learning rate.')
 parser.add_argument('--batch_size', type=int,           default=256, help='Batch size')
 parser.add_argument('--train_split', type=float,        default=0.8, help='Train split')
 parser.add_argument('--logdir', type=str,               default='saved_models', help='Directory to log data to')

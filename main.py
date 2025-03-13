@@ -3,7 +3,7 @@ Author: Mattia Fabiani
 Update: This version of the main allows the grouping of the results by SNR values.
 
 To generate the dataset run this in the command line: python main.py --generate_dataset 1 --dataset_size 20000 --dataset_name my_dataset
-To train the model type these:                        python main.py --train 1 --dataset_name TIMES --dataset_size 20000 --epochs 50 --type sub-connected --logdir saved_models/single_user_TIMES/N_RF  --batch_size 250 --lr 0.003 --N 128 --N_RF 64 --model 1
+To train the model type these:                        python main.py --train 1 --dataset_name polar_uniform --dataset_size 20000 --epochs 50 --type sub-connected --logdir saved_models/single_user_TIMES/N_RF  --batch_size 250 --lr 0.003 --N 128 --N_RF 64 --model 1
                                                       '''
 
 import matplotlib.pyplot as plt
