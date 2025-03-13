@@ -7,7 +7,7 @@ SNR_dB = 0:5:20;
 
 %% Load Variables
 csv_filename = 'test_rmse.csv';
-DNN_hyb_fully_RF16 = readtable(strcat('saved_models/single_user/uniform/fully-connected_epochs50_batch256_lr0.003_16RF_128N_THEIR_RESULT_DNNN/',csv_filename));
+DNN_hyb_fully_RF16 = readtable(strcat('saved_models/single_user/uniform/fully-connected_epochs50_batch256_lr0.003_16RF_128N_THEIR_RESULT_DNN/',csv_filename));
 CNN_hyb_fully_RF16_polar_uniform = readtable(strcat('saved_models/single_user/uniform/fully-connected_epochs50_batch256_lr0.003_16RF_128N_/',csv_filename));
 CNN_hyb_sub_RF16_polar_uniform = readtable(strcat('saved_models/single_user/uniform/sub-connected_epochs50_batch256_lr0.003_16RF_128N_/',csv_filename));
 
