@@ -11,5 +11,8 @@
 *.gif
 *.fig
 *.docx
-*.pptx
-imgs
+documents/imgs/*
+!documents/imgs/*system_*.png
+!documents/imgs/*dnn_model.png
+documents/literature/
+dataset

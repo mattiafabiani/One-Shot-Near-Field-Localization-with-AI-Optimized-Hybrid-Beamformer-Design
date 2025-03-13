@@ -3,7 +3,6 @@
 - [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
-- [Contributing](#contributing)
 - [License](#license)
 - [Acknowledgements](#acknowledgements)
 
@@ -16,6 +15,13 @@ This project introduces a learning-based approach to the near-field source local
 - Superior performance in multipath propagation conditions
 - Scalability with fewer RF chains
 - Single pilot for one-shot near-field user localization
+
+# Images
+<p align="center">
+    <img src="documents/imgs/system_model_sub.png" alt="Image 1" width="30%">
+    <img src="documents/imgs/system_model_inter.png" alt="Image 2" width="30%">
+    <img src="documents/imgs/dnn_model.png" alt="Image 3" width="30%">
+</p>
 
 # Installation
 First, initialize the conda environment:

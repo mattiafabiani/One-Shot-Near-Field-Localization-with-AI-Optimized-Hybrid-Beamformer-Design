@@ -17,7 +17,7 @@ CNN_hyb_inter_RF8_polar_uniform = readtable(strcat(model_path,'inter-connected_e
 CNN_hyb_inter_RF16_polar_uniform = readtable(strcat(model_path,'inter-connected_epochs50_batch256_lr0.003_16RF_128N_/',csv_filename));
 CNN_hyb_inter_RF32_polar_uniform = readtable(strcat(model_path,'inter-connected_epochs50_batch256_lr0.003_32RF_128N_/',csv_filename));
 CNN_hyb_inter_RF64_polar_uniform = readtable(strcat(model_path,'inter-connected_epochs50_batch256_lr0.003_64RF_128N_/',csv_filename));
-CNN_hyb_inter_RF128_polar_uniform = readtable(strcat(model_path,'inter-connected_epochs50_batch256_lr0.003_128RF_128N_/',csv_filename));
+% CNN_hyb_inter_RF128_polar_uniform = readtable(strcat(model_path,'inter-connected_epochs50_batch256_lr0.003_128RF_128N_/',csv_filename));
 
 % Multipath
 multipath_CNN_near_ue_uniform_N128_RF8 = readtable(strcat('saved_models/uniform/multipath/inter-connected_epochs50_batch256_lr0.003_8RF_128N_/',csv_filename));
