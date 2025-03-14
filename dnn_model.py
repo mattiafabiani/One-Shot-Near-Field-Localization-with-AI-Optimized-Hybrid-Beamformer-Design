@@ -41,8 +41,8 @@ class CNN_model(nn.Module):
         self.fc1 = nn.Linear(self.N*2, self.N_RF*2)
         self.mlp = nn.Sequential(
             nn.Linear(self.N_RF*conv2_channels,512), nn.BatchNorm1d(512), nn.ReLU(),
-            nn.Linear(512,256), nn.BatchNorm1d(256), nn.ReLU(),# nn.Dropout(.1),
-            nn.Linear(256,128), nn.BatchNorm1d(128), nn.ReLU(),# nn.Dropout(.1),
+            nn.Linear(512,256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(.1),
+            nn.Linear(256,128), nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(.1),
             nn.Linear(128,n_out), nn.Tanh()
         )
         self.conv1 = nn.Sequential(nn.Conv2d(2,conv1_channels,1,1), nn.BatchNorm2d(conv1_channels), nn.ReLU())
