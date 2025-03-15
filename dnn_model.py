@@ -60,38 +60,6 @@ class CNN_model(nn.Module):
         x = x.view(batch_size, -1)  # Output shape: [batch_size, n_channels * N_RF]
         x = self.mlp(x)
         return x
-    
-class CNN_snapshots(nn.Module):
-    def __init__(self, N, N_RF, n_out, n_snap=10):
-        super(CNN_snapshots, self).__init__()
-        self.n_snap = n_snap
-        self.N = N
-        self.N_RF = N_RF
-        conv1_channels = 32
-        conv2_channels = 16
-        self.fc1 = nn.Linear(self.N*2, self.N_RF*2)
-        self.conv1 = nn.Sequential(nn.Conv2d(self.n_snap,conv1_channels,1,1), nn.BatchNorm2d(conv1_channels), nn.ReLU())
-        self.conv2 = nn.Sequential(nn.Conv2d(conv1_channels,conv2_channels,1,1), nn.BatchNorm2d(conv2_channels), nn.ReLU())
-        self.mlp = nn.Sequential(
-            nn.Linear(self.N_RF*conv2_channels*2,512), nn.BatchNorm1d(512), nn.ReLU(),
-            nn.Linear(512,256), nn.BatchNorm1d(256), nn.ReLU(), nn.Dropout(.1),
-            nn.Linear(256,128), nn.BatchNorm1d(128), nn.ReLU(), nn.Dropout(.1),
-            nn.Linear(128,n_out), nn.Tanh()
-        )
-
-    def forward(self, x):
-        # Forward pass through the first layer
-        x = self.fc1(x)  # Output shape: [batch_size, n_snapshots, N_RF * 2]
-        x = x.view(x.size(0), self.n_snap, self.N_RF, 2)  # Output shape: [batch_size, n_snapshots, N_RF, 2]
-        x = self.conv1(x)  # Output shape: [batch_size, n_channels, N_RF, 1]
-        x = self.conv2(x)
-        x = x.view(x.size(0), -1)  # Output shape: [batch_size, n_channels * N_RF]
-        
-        x = self.mlp(x)
-        return x
-    
-
-    
 class weightConstraint(object):
     def __init__(self,N,N_RF,type='fully-connected'):
         self.N = N

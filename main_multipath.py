@@ -16,7 +16,7 @@ import torch.optim as optim
 from utils import CN_realization, path_loss_model, pol2dist
 import os
 # from torch.utils.data import DataLoader
-from dnn_model import DNN_model, CNN_model, CNN_snapshots
+from dnn_model import DNN_model, CNN_model
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from network_functions_multipath import train_loop, eval_loop, test_loop
 
@@ -61,7 +61,7 @@ test_split = 0.1
 dataset_root = 'dataset/'
 dataset_name = args.dataset_name+'_'+str(int(dataset_size*len(SNR)/1e3)) + 'k.npy'
 dataset_path = os.path.join(dataset_root,dataset_name)
-models = [DNN_model,CNN_model,CNN_snapshots]        # create a list of models if more than one are developed
+models = [DNN_model,CNN_model]        # create a list of models if more than one are developed
 rng_seed = 42
 #------------------------------------------
 

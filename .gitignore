@@ -1,5 +1,5 @@
-*.pkl
 *.npy
+*.pkl
 *.pdf
 *.png
 *.jpg
@@ -11,22 +11,18 @@
 *.gif
 *.fig
 *.docx
+*.pptx
+
 documents/imgs/*
 !documents/imgs/*system_*.png
 !documents/imgs/*dnn_model.png
 documents/literature/
-saved_models/
+documents/*.pptx
 
-!saved_models/hyb_configs/
-!saved_models/hyb_configs/**
-
-!saved_models/N_RF/
-!saved_models/N_RF/**
-
-!saved_models/multipath/
-!saved_models/multipath/**
-
-!saved_models/maximum_likelihood/
-!saved_models/maximum_likelihood/**
-
+saved_models/*
+!saved_models/hyb_configs
+# !saved_models/hyb_configs/*/*.csv
+# !saved_models/N_RF/
+# !saved_models/multipath/
+# !saved_models/maximum_likelihood/
 dataset
