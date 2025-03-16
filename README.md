@@ -77,14 +77,39 @@ python main_multipath.py --logdir saved_models/multipath/ --epochs 50 --N_RF 16 
 
 Finally, run `fully-digital.py` to generate the fully-digital solution, then`plots.m` on MATLAB to reproduce the paper figures.
 
+# Contributing
+We welcome contributions to this project! Please follow these guidelines to ensure a smooth contribution process.
 
-<!-- # Contributing
-Guidelines for contributing to the project. -->
+## How to Contribute
+1. **Fork the repository**: Click the "Fork" button at the top right of this page to create a copy of this repository in your GitHub account.
+2. **Clone your fork**: Use `git clone` to clone your fork to your local machine.
+    ```bash
+    git clone https://github.com/mattiafabiani/One-Shot-Near-Field-Localization-with-AI-Optimized-Hybrid-Beamformer-Design.git
+    ```
+3. **Create a branch**: Create a new branch for your feature or bugfix.
+    ```bash
+    git checkout -b my-feature-branch
+    ```
+4. **Make your changes**: Implement your feature or bugfix.
+5. **Commit your changes**: Commit your changes with a clear and descriptive commit message.
+    ```bash
+    git add .
+    git commit -m "Description of my changes"
+    ```
+6. **Push to your fork**: Push your changes to your forked repository.
+    ```bash
+    git push origin my-feature-branch
+    ```
+7. **Create a Pull Request**: Go to the original repository and create a pull request from your forked repository. Provide a clear description of your changes and why they are necessary.
+
+## Reporting Issues
+If you find a bug or have a feature request, please open an issue on GitHub. Provide as much detail as possible to help us understand and address the issue.
+
+Thank you for contributing!
 
 # License
-<!-- This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details. -->
+This project is licensed under the MIT License. If you use this project in your research, please cite our paper. For more details, see the [LICENSE](LICENSE) file.
 
-If you use this project in your research, please cite our paper.
 
 # Acknowledgements
 This work has been performed in the framework of the HORIZON-JUSNS-2022 project TIMES, grant no. 101096307, co-funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union.
