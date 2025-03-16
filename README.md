@@ -8,6 +8,11 @@
 
 # Introduction
 This project introduces a learning-based approach to the near-field source localization problem using a hybrid analog-digital beamformer in an extremely large-scale multiple-input multiple-output (XL-MIMO) system. The purpose of this project is to address the gap in the literature regarding effective techniques for partially connected hybrid beamformers in near-field localization. By leveraging a Convolutional Neural Network (CNN)-based model, the project aims to design an analog beamformer with proper training constraints and estimate the single-user near-field position in a single snapshot. Our approach demonstrates superior performance over existing solutions, ensuring robustness in multipath propagation conditions, and achieving scalability with fewer RF chains compared to fully-connected architectures. Additionally, we utilize a single pilot, resulting in one-shot near-field user localization.
+<p align="center">
+    <img src="documents/imgs/sub-connected.png" alt="Image 1" width="30%">
+    <img src="documents/imgs/inter-connected.png" alt="Image 2" width="30%">
+    <img src="documents/imgs/dnn_model.png" alt="Image 3" width="30%">
+</p>
 
 # Features
 - Hybrid analog-digital beamforming
@@ -16,12 +21,6 @@ This project introduces a learning-based approach to the near-field source local
 - Scalability with fewer RF chains
 - Single pilot for one-shot near-field user localization
 
-# Images
-<p align="center">
-    <img src="documents/imgs/system_model_sub.png" alt="Image 1" width="30%">
-    <img src="documents/imgs/system_model_inter.png" alt="Image 2" width="30%">
-    <img src="documents/imgs/dnn_model.png" alt="Image 3" width="30%">
-</p>
 
 # Installation
 First, initialize the conda environment:
@@ -44,7 +43,7 @@ python main_multipath.py --generate_dataset 1 --dataset_size 20000 --dataset_nam
 ```
 
 # Usage
-Train the CNN model for different configurations:
+Train (or Test) the CNN model for different configurations:
 - `--logdir saved_models/hyb_config --train 1`
     - `--type fully-connected --model 0` (model 0: DNN, model 1: CNN)
     - `--type fully-connected --model 1`
@@ -83,7 +82,9 @@ Finally, run `fully-digital.py` to generate the fully-digital solution, then`plo
 Guidelines for contributing to the project. -->
 
 # License
-Information about the project's license.
+<!-- This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details. -->
+
+If you use this project in your research, please cite our paper.
 
 # Acknowledgements
 This work has been performed in the framework of the HORIZON-JUSNS-2022 project TIMES, grant no. 101096307, co-funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union.

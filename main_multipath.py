@@ -26,15 +26,15 @@ parser.add_argument('--epochs', type=int,               default=50, help='Number
 parser.add_argument('--model', type=int,                default=1, help='Specify model') # 0: DNN, 1: CNN
 parser.add_argument('--N', type=int,                    default=128, help='Number of antennas.')
 parser.add_argument('--N_RF', type=int,                 default=16, help='Number of RF chains.')
-parser.add_argument('--type', type=str,                 default='fully-connected', help='RF chains to antenna connection')
+parser.add_argument('--type', type=str,                 default='inter-connected', help='RF chains to antenna connection')
 parser.add_argument('--generate_dataset', type=int,     default=0, help='Generate Dataset.')
 parser.add_argument('--dataset_name', type=str,         default='dataset', help='Default dataset name')
 parser.add_argument('--dataset_size', type=int,         default=20000, help='# of samples for each SNR value.')
-parser.add_argument('--train', type=int,                default=1, help='Train the DNN model.')
+parser.add_argument('--train', type=int,                default=0, help='Train the DNN model.')
 parser.add_argument('--lr', type=float,                 default=0.001, help='Learning rate.')
 parser.add_argument('--batch_size', type=int,           default=256, help='Batch size')
 parser.add_argument('--train_split', type=float,        default=0.8, help='Train split')
-parser.add_argument('--logdir', type=str,               default='saved_models', help='Directory to log data to')
+parser.add_argument('--logdir', type=str,               default='saved_models/multipath', help='Directory to log data to')
 parser.add_argument('--scheduler', type=int,            default=0, help='use scheduler to control the learning rate')
 args = parser.parse_args()
 foldername = args.type + '_' +'epochs'+str(args.epochs)+'_batch'+str(args.batch_size)+'_lr'+str(args.lr)+'_'+str(args.N_RF)+'RF_'+str(args.N)+'N'
@@ -51,7 +51,7 @@ SNR = [10 ** (SNR / 10) for SNR in SNR_dB]
 
 range_limits = [1, 10]      # near-field range limits [m]
 
-dataset_size = args.dataset_size        # number of signals per SNR (10k * 5 = 50k samples in ottal)
+dataset_size = args.dataset_size        # number of signals per SNR (10k * 5 = 50k samples in total)
 epochs = args.epochs
 batch_size = args.batch_size
 lr = args.lr
@@ -283,6 +283,32 @@ if args.train:
     df_datapoints = pd.DataFrame(data_test)
     df_datapoints.to_csv(os.path.join(args.logdir,'test_scores.csv'),index=False)
 
+    for theta_max in [60, 70, 80]:
+        grouped_df_snr = df_datapoints.groupby('SNR')
+        r_list = []
+        theta_list = []
+        pos_list = []
+        r_scat_list = []
+        theta_scat_list = []
+        pos_scat_list = []
+        for snr, group in grouped_df_snr:
+            group = group[np.abs(group['theta_true']) < theta_max]
+            r_list.append(np.sqrt(group['Test (r)'].mean()))
+            theta_list.append(np.sqrt(group['Test (theta)'].mean()))
+            pos_list.append(np.sqrt(group['Test (pos)'].mean()))
+            r_scat_list.append(np.sqrt(group['Test (r_scat)'].mean()))
+            theta_scat_list.append(np.sqrt(group['Test (theta_scat)'].mean()))
+            pos_scat_list.append(np.sqrt(group['Test (pos_scat)'].mean()))
+        data = pd.DataFrame({
+            'Test (r)': r_list,
+            'Test (theta)': theta_list,
+            'Test (pos)': pos_list,
+            'Test (r_scat)': r_scat_list,
+            'Test (theta_scat)': theta_scat_list,
+            'Test (pos_scat)': pos_scat_list,
+        })
+        data.to_csv(os.path.join(args.logdir,f'test_rmse{theta_max}.csv'),index=False)
+
 else:
     #%% Test
 
@@ -307,7 +333,7 @@ else:
     df = pd.DataFrame(data,index=SNR_dB)
     df.index.name = 'SNR [dB]'
     print(df)
-    # df.to_csv(os.path.join(args.logdir,'test_rmse.csv'),index=False)
+    df.to_csv(os.path.join(args.logdir,'test_rmse.csv'),index=False)
     df_datapoints = pd.DataFrame(data_test)
     df_datapoints.to_csv(os.path.join(args.logdir,'test_scores.csv'),index=False)
 
