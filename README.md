@@ -110,6 +110,18 @@ Thank you for contributing!
 # License
 This project is licensed under the MIT License. If you use this project in your research, please cite our paper. For more details, see the [LICENSE](LICENSE) file.
 
+@INPROCEEDINGS{11161317,
+  author={Fabiani, Mattia and Dardari, Davide and D'Amico, Antonio A. and Sanguinetti, Luca},
+  booktitle={ICC 2025 - IEEE International Conference on Communications}, 
+  title={One-Shot Near-Field Localization with Ai-Optimized Hybrid Beamformer Design}, 
+  year={2025},
+  volume={},
+  number={},
+  pages={2509-2513},
+  keywords={Location awareness;Radio frequency;Training;Accuracy;Array signal processing;Simulation;Scalability;Robustness;Convolutional neural networks;Analog-digital conversion;Convolutional neural network;near-field;XLMIMO;one-shot localization;sub-array;inter-connected;hybrid beamforming},
+  doi={10.1109/ICC52391.2025.11161317}}
+
+
 
 # Acknowledgements
 This work has been performed in the framework of the HORIZON-JUSNS-2022 project TIMES, grant no. 101096307, co-funded by the European Union. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union.
