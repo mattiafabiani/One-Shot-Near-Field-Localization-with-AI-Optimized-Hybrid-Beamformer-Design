@@ -110,6 +110,7 @@ Thank you for contributing!
 # License
 This project is licensed under the MIT License. If you use this project in your research, please cite our paper. For more details, see the [LICENSE](LICENSE) file.
 
+```bash
 @INPROCEEDINGS{11161317,
   author={Fabiani, Mattia and Dardari, Davide and D'Amico, Antonio A. and Sanguinetti, Luca},
   booktitle={ICC 2025 - IEEE International Conference on Communications}, 
@@ -120,6 +121,7 @@ This project is licensed under the MIT License. If you use this project in your 
   pages={2509-2513},
   keywords={Location awareness;Radio frequency;Training;Accuracy;Array signal processing;Simulation;Scalability;Robustness;Convolutional neural networks;Analog-digital conversion;Convolutional neural network;near-field;XLMIMO;one-shot localization;sub-array;inter-connected;hybrid beamforming},
   doi={10.1109/ICC52391.2025.11161317}}
+```
 
 
 
